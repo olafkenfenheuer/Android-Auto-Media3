@@ -41,6 +41,6 @@
     <string name="media_route_menu_title">Cast</string>
 
     <!-- Browse Tree -->
-    <string name="recommended_title">Recommended</string>
-    <string name="albums_title">Albums</string>
+    <string name="recommended_title">Kanäle</string>
+    <string name="albums_title">Sender</string>
 </resources>

@@ -17,14 +17,12 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'kotlin-android-extensions'
+//apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
 
     defaultConfig {
-        versionCode 1
-        versionName "1.0"
 
         minSdkVersion rootProject.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
@@ -40,8 +38,11 @@ android {
         }
     }
     compileOptions {
-        targetCompatibility = '1.8'
+        //targetCompatibility = '1.8'
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
+    namespace 'com.example.android.uamp.media'
 
 }
 

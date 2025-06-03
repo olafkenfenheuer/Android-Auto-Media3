@@ -17,25 +17,10 @@
 package com.example.android.uamp.media.library
 
 import android.net.Uri
-import android.support.v4.media.MediaBrowserCompat.MediaItem
-import android.support.v4.media.MediaDescriptionCompat.STATUS_NOT_DOWNLOADED
-import android.support.v4.media.MediaMetadataCompat
-import com.example.android.uamp.media.extensions.album
-import com.example.android.uamp.media.extensions.albumArtUri
-import com.example.android.uamp.media.extensions.artist
-import com.example.android.uamp.media.extensions.displayDescription
-import com.example.android.uamp.media.extensions.displayIconUri
-import com.example.android.uamp.media.extensions.displaySubtitle
-import com.example.android.uamp.media.extensions.displayTitle
-import com.example.android.uamp.media.extensions.downloadStatus
-import com.example.android.uamp.media.extensions.duration
-import com.example.android.uamp.media.extensions.flag
-import com.example.android.uamp.media.extensions.genre
-import com.example.android.uamp.media.extensions.id
-import com.example.android.uamp.media.extensions.mediaUri
-import com.example.android.uamp.media.extensions.title
-import com.example.android.uamp.media.extensions.trackCount
-import com.example.android.uamp.media.extensions.trackNumber
+import android.os.Bundle
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,6 +28,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
+import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 
 /**
@@ -57,13 +43,13 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
         const val ORIGINAL_ARTWORK_URI_KEY = "com.example.android.uamp.JSON_ARTWORK_URI"
     }
 
-    private var catalog: List<MediaMetadataCompat> = emptyList()
+    private var catalog: List<androidx.media3.common.MediaItem> = emptyList()
 
     init {
         state = STATE_INITIALIZING
     }
 
-    override fun iterator(): Iterator<MediaMetadataCompat> = catalog.iterator()
+    override fun iterator(): Iterator<MediaItem> = catalog.iterator()
 
     override suspend fun load() {
         updateCatalog(source)?.let { updatedCatalog ->
@@ -79,7 +65,7 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
      * Function to connect to a remote URI and download/process the JSON file that corresponds to
      * [MediaMetadataCompat] objects.
      */
-    private suspend fun updateCatalog(catalogUri: Uri): List<MediaMetadataCompat>? {
+    private suspend fun updateCatalog(catalogUri: Uri): List<MediaItem>? {
         return withContext(Dispatchers.IO) {
             val musicCat = try {
                 downloadJson(catalogUri)
@@ -90,7 +76,7 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
             // Get the base URI to fix up relative references later.
             val baseUri = catalogUri.toString().removeSuffix(catalogUri.lastPathSegment ?: "")
 
-            val mediaMetadataCompats = musicCat.music.map { song ->
+            musicCat.music.map { song ->
                 // The JSON may have paths that are relative to the source of the JSON
                 // itself. We need to fix them up here to turn them into absolute paths.
                 catalogUri.scheme?.let { scheme ->
@@ -101,23 +87,27 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
                         song.image = baseUri + song.image
                     }
                 }
+
                 val jsonImageUri = Uri.parse(song.image)
                 val imageUri = AlbumArtContentProvider.mapUri(jsonImageUri)
-
-                MediaMetadataCompat.Builder()
+                val mediaMetadata = MediaMetadata.Builder()
                     .from(song)
                     .apply {
-                        displayIconUri = imageUri.toString() // Used by ExoPlayer and Notification
-                        albumArtUri = imageUri.toString()
+                        setArtworkUri(imageUri) // Used by ExoPlayer and Notification
                         // Keep the original artwork URI for being included in Cast metadata object.
-                        putString(ORIGINAL_ARTWORK_URI_KEY, jsonImageUri.toString())
+                        val extras = Bundle()
+                        extras.putString(ORIGINAL_ARTWORK_URI_KEY, jsonImageUri.toString())
+                        setExtras(extras)
                     }
                     .build()
+                MediaItem.Builder()
+                    .apply {
+                        setMediaId(song.id)
+                        setUri(song.source)
+                        setMimeType(MimeTypes.AUDIO_MPEG)
+                        setMediaMetadata(mediaMetadata)
+                    }.build()
             }.toList()
-            // Add description keys to be used by the ExoPlayer MediaSession extension when
-            // announcing metadata changes.
-            mediaMetadataCompats.forEach { it.description.extras?.putAll(it.bundle) }
-            mediaMetadataCompats
         }
     }
 
@@ -129,46 +119,174 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
      * @return The catalog downloaded, or an empty catalog if an error occurred.
      */
     @Throws(IOException::class)
+    /*
     private fun downloadJson(catalogUri: Uri): JsonCatalog {
         val catalogConn = URL(catalogUri.toString())
         val reader = BufferedReader(InputStreamReader(catalogConn.openStream()))
         return Gson().fromJson(reader, JsonCatalog::class.java)
     }
 }
+*/
+private fun downloadJson(catalogUri: Uri): JsonCatalog {
+    val catalogConn = URL(catalogUri.toString())
+    val reader =  try {
+        BufferedReader(InputStreamReader(catalogConn.openStream()))
+    } catch (ioException: IOException) {
+        BufferedReader(InputStreamReader(localJson.byteInputStream(Charset.defaultCharset())))
+    }
+
+    return Gson().fromJson(reader, JsonCatalog::class.java)
+}
+}
+
+
+
+private var localJson = "{\n" +
+        "  \"music\": [\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_01\",\n" +
+        "      \"title\": \"WDR 2\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr2-rheinland.icecastssl.wdr.de/wdr/wdr2/rheinland/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/wdr2-default100~_v-gseaclassicxl.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"http://wdr2.de\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_02\",\n" +
+        "      \"title\": \"1LIVE\",\n" +
+        "      \"album\": \"1LIVE\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-1live-live.icecastssl.wdr.de/wdr/1live/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/1live/einslive124~_v-gseaclassicxl.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www1.wdr.de/radio/1live/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_03\",\n" +
+        "      \"title\": \"1LIVE DIGGI\",\n" +
+        "      \"album\": \"1LIVE\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-1live-diggi.icecastssl.wdr.de/wdr/1live/diggi/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/player/tva-export/1live-diggi-106~_v-Podcast.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www1.wdr.de/radio/1live/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_04\",\n" +
+        "      \"title\": \"WDR4\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr4-live.icecastssl.wdr.de/wdr/wdr4/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/wdr4/wdrvier_logo104~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_05\",\n" +
+        "      \"title\": \"WDR5\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr5-live.icecastssl.wdr.de/wdr/wdr5/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/startseite/symbolbilder/wellen-logo100~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_06\",\n" +
+        "      \"title\": \"WDR COSMO\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-cosmo-live.icecastssl.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/cosmo-logo108~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_07\",\n" +
+        "      \"title\": \"Bremen 4\",\n" +
+        "      \"album\": \"Bremen 4\",\n" +
+        "      \"artist\": \"Bremen\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://icecast.radiobremen.de/rb/bremenvier/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://dein.radiobremen.de/bilder/logo-bremenvier-100~_v-512x288_c-1589529238677.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_09\",\n" +
+        "      \"title\": \"R.SH\",\n" +
+        "      \"album\": \"R.SH\",\n" +
+        "      \"artist\": \"R.SH\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://streams.rsh.de/rsh-live/mp3-128/streams.rsh.de/\",\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/1b7da8b7-588e-42a0-b519-27dfc348da8f.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_08\",\n" +
+        "      \"title\": \"R.SH Sylt\",\n" +
+        "      \"album\": \"R.SH\",\n" +
+        "      \"artist\": \"R.SH Sylt\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://streams.rsh.de/rsh-sylt/mp3-128/streams.rsh.de\",\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/600x600%20px.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    }\n" +
+        "\n" +
+        "\n" +
+        "  ]\n" +
+        "}";
+
+
 
 /**
  * Extension method for [MediaMetadataCompat.Builder] to set the fields from
  * our JSON constructed object (to make the code a bit easier to see).
  */
-fun MediaMetadataCompat.Builder.from(jsonMusic: JsonMusic): MediaMetadataCompat.Builder {
+fun MediaMetadata.Builder.from(jsonMusic: JsonMusic): MediaMetadata.Builder {
+    setTitle(jsonMusic.title)
+    setDisplayTitle(jsonMusic.title)
+    setArtist(jsonMusic.artist)
+    setAlbumTitle(jsonMusic.album)
+    setGenre(jsonMusic.genre)
+    setArtworkUri(Uri.parse(jsonMusic.image))
+    setTrackNumber(jsonMusic.trackNumber.toInt())
+    setTotalTrackCount(jsonMusic.totalTrackCount.toInt())
+    setFolderType(MediaMetadata.FOLDER_TYPE_NONE)
+    setIsPlayable(true)
     // The duration from the JSON is given in seconds, but the rest of the code works in
     // milliseconds. Here's where we convert to the proper units.
     val durationMs = TimeUnit.SECONDS.toMillis(jsonMusic.duration)
-
-    id = jsonMusic.id
-    title = jsonMusic.title
-    artist = jsonMusic.artist
-    album = jsonMusic.album
-    duration = durationMs
-    genre = jsonMusic.genre
-    mediaUri = jsonMusic.source
-    albumArtUri = jsonMusic.image
-    trackNumber = jsonMusic.trackNumber
-    trackCount = jsonMusic.totalTrackCount
-    flag = MediaItem.FLAG_PLAYABLE
-
-    // To make things easier for *displaying* these, set the display properties as well.
-    displayTitle = jsonMusic.title
-    displaySubtitle = jsonMusic.artist
-    displayDescription = jsonMusic.album
-    displayIconUri = jsonMusic.image
-
-    // Add downloadStatus to force the creation of an "extras" bundle in the resulting
-    // MediaMetadataCompat object. This is needed to send accurate metadata to the
-    // media session during updates.
-    downloadStatus = STATUS_NOT_DOWNLOADED
-
-    // Allow it to be used in the typical builder style.
+    val bundle = Bundle()
+    bundle.putLong("durationMs", durationMs)
     return this
 }
 

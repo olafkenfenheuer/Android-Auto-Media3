@@ -19,17 +19,44 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'kotlin-android-extensions'
 
+def vcode = (int)(((new Date().getTime()/1000) - 1451606400) / 1000)
+
 android {
     compileSdkVersion rootProject.compileSdkVersion
+    signingConfigs {
+        release {
+            storeFile file('/home/olaf/Nextcloud/AndroidProjekte/Keys/MyShoppingList.jks')
+            storePassword '!Kernel22'
+            keyPassword '!Kernel22'
+            keyAlias = 'key0'
+        }
+        debug {
+            storeFile file('/home/olaf/Nextcloud/AndroidProjekte/Keys/MyShoppingList.jks')
+            storePassword '!Kernel22'
+            keyAlias = 'key0'
+            keyPassword '!Kernel22'
+        }
+        compileOptions {
+//            sourceCompatibility JavaVersion.VERSION_1_8
+//            targetCompatibility JavaVersion.VERSION_1_8
+        }
+    }
+
+
 
     defaultConfig {
         applicationId "com.example.android.uamp.next"
-        versionCode 1
-        versionName "1.0"
+//        versionCode 1
+//        versionName "1.0"
 
         minSdkVersion rootProject.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
         multiDexEnabled true
+
+        versionCode vcode
+        versionName "2.6."+vcode
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        setProperty("archivesBaseName", "InternetRadio-"+versionName)
 
         compileOptions {
             sourceCompatibility JavaVersion.VERSION_1_8
@@ -70,6 +97,7 @@ dependencies {
 
     implementation "androidx.constraintlayout:constraintlayout:$constraint_layout_version"
     implementation "androidx.lifecycle:lifecycle-extensions:$arch_lifecycle_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:$kotlin_coroutines_version"
 
     // Glide dependencies
     implementation "com.github.bumptech.glide:glide:$glide_version"

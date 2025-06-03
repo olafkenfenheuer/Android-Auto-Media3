@@ -240,8 +240,8 @@ private var localJson = "{\n" +
         "      \"album\": \"R.SH\",\n" +
         "      \"artist\": \"R.SH\",\n" +
         "      \"genre\": \"Pop\",\n" +
-        "      \"source\": \"https://rsh.hoerradar.de/rsh128\",\n" +
-        "      \"image\": \"https://www.regiocast.de/wp-content/uploads/2019/10/R.SH_Logo.jpg\" ,\n" +
+        "      \"source\": \"https://streams.rsh.de/rsh-live/mp3-128/streams.rsh.de/\",\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/1b7da8b7-588e-42a0-b519-27dfc348da8f.jpg\" ,\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -253,7 +253,7 @@ private var localJson = "{\n" +
         "      \"album\": \"R.SH\",\n" +
         "      \"artist\": \"R.SH Sylt\",\n" +
         "      \"genre\": \"Pop\",\n" +
-        "      \"source\": \"https://rsh.hoerradar.de/rsh-sylt-mp3-mq\",\n" +
+        "      \"source\": \"https://streams.rsh.de/rsh-sylt/mp3-128/streams.rsh.de\",\n" +
         "      \"image\": \"https://liveradio.de/media/cache/station_detail/600x600%20px.jpg\" ,\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +

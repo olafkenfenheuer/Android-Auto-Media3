@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@string/album_art_alt"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         app:srcCompat="@android:color/transparent" />
 
     <androidx.constraintlayout.widget.Guideline

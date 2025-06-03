@@ -28,6 +28,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
+import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 
 /**
@@ -118,12 +119,153 @@ internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
      * @return The catalog downloaded, or an empty catalog if an error occurred.
      */
     @Throws(IOException::class)
+    /*
     private fun downloadJson(catalogUri: Uri): JsonCatalog {
         val catalogConn = URL(catalogUri.toString())
         val reader = BufferedReader(InputStreamReader(catalogConn.openStream()))
         return Gson().fromJson(reader, JsonCatalog::class.java)
     }
 }
+*/
+private fun downloadJson(catalogUri: Uri): JsonCatalog {
+    val catalogConn = URL(catalogUri.toString())
+    val reader =  try {
+        BufferedReader(InputStreamReader(catalogConn.openStream()))
+    } catch (ioException: IOException) {
+        BufferedReader(InputStreamReader(localJson.byteInputStream(Charset.defaultCharset())))
+    }
+
+    return Gson().fromJson(reader, JsonCatalog::class.java)
+}
+}
+
+
+
+private var localJson = "{\n" +
+        "  \"music\": [\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_01\",\n" +
+        "      \"title\": \"WDR 2\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr2-rheinland.icecastssl.wdr.de/wdr/wdr2/rheinland/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/wdr2-default100~_v-gseaclassicxl.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"http://wdr2.de\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_02\",\n" +
+        "      \"title\": \"1LIVE\",\n" +
+        "      \"album\": \"1LIVE\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-1live-live.icecastssl.wdr.de/wdr/1live/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/1live/einslive124~_v-gseaclassicxl.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www1.wdr.de/radio/1live/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_03\",\n" +
+        "      \"title\": \"1LIVE DIGGI\",\n" +
+        "      \"album\": \"1LIVE\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-1live-diggi.icecastssl.wdr.de/wdr/1live/diggi/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/player/tva-export/1live-diggi-106~_v-Podcast.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www1.wdr.de/radio/1live/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_04\",\n" +
+        "      \"title\": \"WDR4\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr4-live.icecastssl.wdr.de/wdr/wdr4/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/wdr4/wdrvier_logo104~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_05\",\n" +
+        "      \"title\": \"WDR5\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-wdr5-live.icecastssl.wdr.de/wdr/wdr5/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/startseite/symbolbilder/wellen-logo100~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_06\",\n" +
+        "      \"title\": \"WDR COSMO\",\n" +
+        "      \"album\": \"WDR\",\n" +
+        "      \"artist\": \"WDR\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://wdr-cosmo-live.icecastssl.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/cosmo-logo108~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_07\",\n" +
+        "      \"title\": \"Bremen 4\",\n" +
+        "      \"album\": \"Bremen 4\",\n" +
+        "      \"artist\": \"Bremen\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://icecast.radiobremen.de/rb/bremenvier/live/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://dein.radiobremen.de/bilder/logo-bremenvier-100~_v-512x288_c-1589529238677.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_09\",\n" +
+        "      \"title\": \"R.SH\",\n" +
+        "      \"album\": \"R.SH\",\n" +
+        "      \"artist\": \"R.SH\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://rsh.hoerradar.de/rsh128\",\n" +
+        "      \"image\": \"https://www.regiocast.de/wp-content/uploads/2019/10/R.SH_Logo.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_08\",\n" +
+        "      \"title\": \"R.SH Sylt\",\n" +
+        "      \"album\": \"R.SH\",\n" +
+        "      \"artist\": \"R.SH Sylt\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://rsh.hoerradar.de/rsh-sylt-mp3-mq\",\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/600x600%20px.jpg\" ,\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    }\n" +
+        "\n" +
+        "\n" +
+        "  ]\n" +
+        "}";
+
+
 
 /**
  * Extension method for [MediaMetadataCompat.Builder] to set the fields from

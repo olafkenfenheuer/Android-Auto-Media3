@@ -16,19 +16,30 @@
 
 package com.example.android.uamp.fragments
 
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.PackageManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.example.android.uamp.MediaItemAdapter
 import com.example.android.uamp.databinding.FragmentMediaitemListBinding
+import com.example.android.uamp.media.MusicService
+import com.example.android.uamp.media.library.JsonSource
+import com.example.android.uamp.media.library.MusicSource
 import com.example.android.uamp.utils.InjectorUtils
 import com.example.android.uamp.viewmodels.MainActivityViewModel
 import com.example.android.uamp.viewmodels.MediaItemFragmentViewModel
+import kotlinx.android.synthetic.main.fragment_mediaitem_list.mySwipeRefreshLayout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * A fragment representing a list of MediaItems.
@@ -68,6 +79,23 @@ class MediaItemFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+
+        mySwipeRefreshLayout.setOnRefreshListener {
+            Log.i(PackageManagerCompat.LOG_TAG, "onRefresh called from SwipeRefreshLayout")
+             val remoteJsonSource: Uri =
+                Uri.parse("https://app.kenfenheuer.net/uamp/music.json")
+
+            lateinit var musicSource: MusicSource
+            val serviceJob = SupervisorJob()
+            val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+            musicSource = JsonSource(source = remoteJsonSource)
+            serviceScope.launch {
+                musicSource.load()
+
+            }
+            mySwipeRefreshLayout.setRefreshing(false)
+        }
+
 
         // Always true, but lets lint know that as well.
         mediaId = arguments?.getString(MEDIA_ID_ARG) ?: return

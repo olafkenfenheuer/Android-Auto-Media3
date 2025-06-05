@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit
  * The definition of the JSON is specified in the docs of [JsonMusic] in this file,
  * which is the object representation of it.
  */
-internal class JsonSource(private val source: Uri) : AbstractMusicSource() {
+ class JsonSource(private val source: Uri) : AbstractMusicSource() {
 
     companion object {
         const val ORIGINAL_ARTWORK_URI_KEY = "com.example.android.uamp.JSON_ARTWORK_URI"

@@ -18,9 +18,11 @@ package com.example.android.uamp
 
 import android.media.AudioManager
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.lifecycle.Observer
 import androidx.media3.common.MediaItem
 import com.example.android.uamp.fragments.MediaItemFragment
@@ -30,6 +32,7 @@ import com.example.android.uamp.utils.InjectorUtils
 import com.example.android.uamp.viewmodels.MainActivityViewModel
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
+import kotlinx.android.synthetic.main.fragment_mediaitem_list.mySwipeRefreshLayout
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,6 +40,8 @@ class MainActivity : AppCompatActivity() {
         InjectorUtils.provideMainActivityViewModel(this)
     }
     private var castContext: CastContext? = null
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +90,8 @@ class MainActivity : AppCompatActivity() {
                 navigateToMediaItem(mediaId)
             }
         })
+
+
     }
 
     @Override

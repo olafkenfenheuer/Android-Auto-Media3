@@ -19,7 +19,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/mySwipeRefreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"
         android:name="com.example.android.uamp.MediaItemFragment"
@@ -45,6 +48,6 @@
         android:visibility="gone"
         app:srcCompat="@drawable/ic_signal_wifi_off_black_24dp"
         app:tint="@color/colorAccent" />
-
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </FrameLayout>
 

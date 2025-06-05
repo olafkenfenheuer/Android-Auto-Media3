@@ -16,8 +16,10 @@
 
 package com.example.android.uamp.viewmodels
 
+import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.util.Log
+import androidx.core.content.PackageManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -45,6 +47,11 @@ import kotlinx.coroutines.launch
 class MainActivityViewModel(
     private val musicServiceConnection: MusicServiceConnection
 ) : ViewModel() {
+
+
+
+
+
 
     private lateinit var lastBrowsableMediaId: String
 
@@ -85,6 +92,7 @@ class MainActivityViewModel(
             showFragment(NowPlayingFragment.newInstance())
         }
     }
+
 
 
     /**

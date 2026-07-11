@@ -173,15 +173,15 @@ internal class PackageValidator(context: Context, @XmlRes xmlResId: Int) {
     private fun buildCallerInfo(callingPackage: String): CallerPackageInfo? {
         val packageInfo = getPackageInfo(callingPackage) ?: return null
 
-        val appName = packageInfo.applicationInfo.loadLabel(packageManager).toString()
-        val uid = packageInfo.applicationInfo.uid
+        val appName = packageInfo.applicationInfo!!.loadLabel(packageManager).toString()
+        val uid = packageInfo.applicationInfo!!.uid
         val signature = getSignature(packageInfo)
 
         val requestedPermissions = packageInfo.requestedPermissions
         val permissionFlags = packageInfo.requestedPermissionsFlags
         val activePermissions = mutableSetOf<String>()
         requestedPermissions?.forEachIndexed { index, permission ->
-            if (permissionFlags[index] and REQUESTED_PERMISSION_GRANTED != 0) {
+            if (permissionFlags!![index] and REQUESTED_PERMISSION_GRANTED != 0) {
                 activePermissions += permission
             }
         }
@@ -214,15 +214,17 @@ internal class PackageValidator(context: Context, @XmlRes xmlResId: Int) {
      * returns `null` as the signature.
      */
     @Suppress("deprecation")
-    private fun getSignature(packageInfo: PackageInfo): String? =
-        if (packageInfo.signatures == null || packageInfo.signatures.size != 1) {
+    private fun getSignature(packageInfo: PackageInfo): String? {
+        val signatures = packageInfo.signatures
+        return if (signatures == null || signatures.size != 1) {
             // Security best practices dictate that an app should be signed with exactly one (1)
             // signature. Because of this, if there are multiple signatures, reject it.
             null
         } else {
-            val certificate = packageInfo.signatures[0].toByteArray()
+            val certificate = signatures[0].toByteArray()
             getSignatureSha256(certificate)
         }
+    }
 
     private fun buildCertificateAllowList(parser: XmlResourceParser): Map<String, KnownCallerInfo> {
 

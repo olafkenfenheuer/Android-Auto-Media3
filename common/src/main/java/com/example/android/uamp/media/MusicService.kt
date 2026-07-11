@@ -223,7 +223,7 @@ open class MusicService : MediaLibraryService() {
     }
 
     /** Called when swiping the activity away from recents. */
-    override fun onTaskRemoved(rootIntent: Intent) {
+    override fun onTaskRemoved(rootIntent: Intent?) {
         saveRecentSongToStorage()
         super.onTaskRemoved(rootIntent)
         // The choice what to do here is app specific. Some apps stop playback, while others allow
@@ -444,7 +444,7 @@ open class MusicService : MediaLibraryService() {
     }
 
     /** Listen for events from ExoPlayer. */
-    private inner class PlayerEventListener : Listener {
+    private inner class PlayerEventListener : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             if (events.contains(EVENT_POSITION_DISCONTINUITY)
                 || events.contains(EVENT_MEDIA_ITEM_TRANSITION)

@@ -35,7 +35,6 @@ import com.example.android.uamp.media.library.MusicSource
 import com.example.android.uamp.utils.InjectorUtils
 import com.example.android.uamp.viewmodels.MainActivityViewModel
 import com.example.android.uamp.viewmodels.MediaItemFragmentViewModel
-import kotlinx.android.synthetic.main.fragment_mediaitem_list.mySwipeRefreshLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,7 +79,7 @@ class MediaItemFragment : Fragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        mySwipeRefreshLayout.setOnRefreshListener {
+        binding.mySwipeRefreshLayout.setOnRefreshListener {
             Log.i(PackageManagerCompat.LOG_TAG, "onRefresh called from SwipeRefreshLayout")
              val remoteJsonSource: Uri =
                 Uri.parse("https://app.kenfenheuer.net/uamp/music.json")
@@ -93,7 +92,7 @@ class MediaItemFragment : Fragment() {
                 musicSource.load()
 
             }
-            mySwipeRefreshLayout.setRefreshing(false)
+            binding.mySwipeRefreshLayout.isRefreshing = false
         }
 
 

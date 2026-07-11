@@ -32,7 +32,6 @@ import com.example.android.uamp.utils.InjectorUtils
 import com.example.android.uamp.viewmodels.MainActivityViewModel
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
-import kotlinx.android.synthetic.main.fragment_mediaitem_list.mySwipeRefreshLayout
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,7 +76,7 @@ class MainActivity : AppCompatActivity() {
          * the initial list of media items.
          */
         viewModel.rootMediaItem.observe(this,
-            Observer<MediaItem> { rootMediaItem ->
+            Observer<MediaItem?> { rootMediaItem ->
                 rootMediaItem?.let { navigateToMediaItem(it.mediaId) }
             })
 

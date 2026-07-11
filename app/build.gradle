@@ -17,37 +17,30 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'kotlin-android-extensions'
 
 def vcode = (int)(((new Date().getTime()/1000) - 1451606400) / 1000)
 
 android {
+    namespace 'com.example.android.uamp'
     compileSdkVersion rootProject.compileSdkVersion
+
     signingConfigs {
         release {
-            storeFile file('/home/olaf/Nextcloud/AndroidProjekte/Keys/MyShoppingList.jks')
+            storeFile file('/home/olaf/OneDrive/NextCloud Data/AndroidProjekte/Keys/MyShoppingList.jks')
             storePassword '!Kernel22'
             keyPassword '!Kernel22'
             keyAlias = 'key0'
         }
         debug {
-            storeFile file('/home/olaf/Nextcloud/AndroidProjekte/Keys/MyShoppingList.jks')
+            storeFile file('/home/olaf/OneDrive/NextCloud Data/AndroidProjekte/Keys/MyShoppingList.jks')
             storePassword '!Kernel22'
             keyAlias = 'key0'
             keyPassword '!Kernel22'
         }
-        compileOptions {
-//            sourceCompatibility JavaVersion.VERSION_1_8
-//            targetCompatibility JavaVersion.VERSION_1_8
-        }
     }
-
-
 
     defaultConfig {
         applicationId "com.example.android.uamp.next"
-//        versionCode 1
-//        versionName "1.0"
 
         minSdkVersion rootProject.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
@@ -55,20 +48,20 @@ android {
 
         versionCode vcode
         versionName "2.6."+vcode
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         setProperty("archivesBaseName", "InternetRadio-"+versionName)
-
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_1_8
-            targetCompatibility JavaVersion.VERSION_1_8
-        }
-        kotlinOptions {
-            jvmTarget = "1.8"
-        }
 
         vectorDrawables {
             useSupportLibrary true
         }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -85,7 +78,7 @@ android {
 }
 
 dependencies {
-    implementation "com.android.support:multidex:$multidex_version"
+    implementation "androidx.multidex:multidex:$multidex_version"
 
     implementation project(':common')
 
@@ -96,7 +89,6 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recycler_view_version"
 
     implementation "androidx.constraintlayout:constraintlayout:$constraint_layout_version"
-    implementation "androidx.lifecycle:lifecycle-extensions:$arch_lifecycle_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:$kotlin_coroutines_version"
 
     // Glide dependencies

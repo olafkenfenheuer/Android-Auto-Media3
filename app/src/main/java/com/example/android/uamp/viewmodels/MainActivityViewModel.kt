@@ -24,7 +24,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -55,8 +55,8 @@ class MainActivityViewModel(
 
     private lateinit var lastBrowsableMediaId: String
 
-    val rootMediaItem: LiveData<MediaItem> =
-        Transformations.map(musicServiceConnection.rootMediaItem) { rootMediaItem ->
+    val rootMediaItem: LiveData<MediaItem?> =
+        musicServiceConnection.rootMediaItem.map { rootMediaItem ->
             if (rootMediaItem != MediaItem.EMPTY) rootMediaItem else null
         }
 
@@ -177,7 +177,7 @@ class MainActivityViewModel(
     ) : ViewModelProvider.NewInstanceFactory() {
 
         @Suppress("unchecked_cast")
-        override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return MainActivityViewModel(musicServiceConnection) as T
         }
     }

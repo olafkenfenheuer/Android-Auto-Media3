@@ -37,6 +37,7 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.CueGroup
+import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import java.util.ArrayDeque
 import kotlin.math.min
@@ -188,6 +189,26 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         for (i in removedItemsLength - 1 downTo 0) {
             playlist.removeAt(fromIndex + i)
         }
+    }
+
+    override fun replaceMediaItem(index: Int, mediaItem: MediaItem) {
+        player.replaceMediaItem(index, mediaItem)
+        if (index < playlist.size) {
+            playlist[index] = mediaItem
+        }
+    }
+
+    override fun replaceMediaItems(
+        fromIndex: Int,
+        toIndex: Int,
+        mediaItems: MutableList<MediaItem>
+    ) {
+        player.replaceMediaItems(fromIndex, toIndex, mediaItems)
+        val clampedToIndex = min(toIndex, playlist.size)
+        for (i in clampedToIndex - 1 downTo fromIndex) {
+            playlist.removeAt(i)
+        }
+        playlist.addAll(min(fromIndex, playlist.size), mediaItems)
     }
 
     override fun clearMediaItems() {
@@ -379,14 +400,6 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         player.stop()
     }
 
-    @OptIn(UnstableApi::class)
-    override fun stop(reset: Boolean) {
-        player.stop(reset)
-        if (reset) {
-            playlist.clear()
-        }
-    }
-
     override fun release() {
         player.release()
         playlist.clear()
@@ -547,6 +560,10 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         return player.audioAttributes
     }
 
+    override fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) {
+        player.setAudioAttributes(audioAttributes, handleAudioFocus)
+    }
+
     override fun setVolume(volume: Float) {
         player.volume = volume
     }
@@ -595,6 +612,11 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         return player.videoSize
     }
 
+    @OptIn(UnstableApi::class)
+    override fun getSurfaceSize(): Size {
+        return player.surfaceSize
+    }
+
     override fun getCurrentCues(): CueGroup {
         return player.currentCues
     }
@@ -615,16 +637,32 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         player.deviceVolume = volume
     }
 
+    override fun setDeviceVolume(volume: Int, flags: Int) {
+        player.setDeviceVolume(volume, flags)
+    }
+
     override fun increaseDeviceVolume() {
         player.increaseDeviceVolume()
+    }
+
+    override fun increaseDeviceVolume(flags: Int) {
+        player.increaseDeviceVolume(flags)
     }
 
     override fun decreaseDeviceVolume() {
         player.decreaseDeviceVolume()
     }
 
+    override fun decreaseDeviceVolume(flags: Int) {
+        player.decreaseDeviceVolume(flags)
+    }
+
     override fun setDeviceMuted(muted: Boolean) {
         player.isDeviceMuted = muted
+    }
+
+    override fun setDeviceMuted(muted: Boolean, flags: Int) {
+        player.setDeviceMuted(muted, flags)
     }
 
     private inner class PlayerListener : Player.Listener {

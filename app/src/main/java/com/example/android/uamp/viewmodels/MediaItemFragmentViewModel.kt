@@ -33,6 +33,7 @@ import com.example.android.uamp.common.MusicServiceConnection
 import com.example.android.uamp.common.NOTHING_PLAYING
 import com.example.android.uamp.common.PlaybackState
 import com.example.android.uamp.fragments.MediaItemFragment
+import com.example.android.uamp.media.COMMAND_REFRESH_CATALOG
 import kotlinx.coroutines.launch
 
 /**
@@ -103,18 +104,34 @@ class MediaItemFragmentViewModel(
     }
 
     init {
+        viewModelScope.launch { loadMediaItems() }
+    }
+
+    /**
+     * Triggers the service to re-download the remote catalog and then reloads this list. Used by the
+     * fragment's pull-to-refresh. [onComplete] runs on the main thread once done (whether or not the
+     * download succeeded) so the caller can stop its refresh indicator.
+     */
+    fun refresh(onComplete: () -> Unit) {
         viewModelScope.launch {
-            val mediaItemList = musicServiceConnection.getChildren(mediaId)
-            val itemsList = mediaItemList.map { child ->
-                MediaItemData(
-                    child,
-                    child.mediaMetadata.isPlayable?.not() == true,
-                    getResourceForMediaId(child.mediaId),
-                    /* parentMediaId= */ mediaId
-                )
-            }
-            _mediaItems.postValue(itemsList)
+            musicServiceConnection.sendCommand(COMMAND_REFRESH_CATALOG, null)
+            loadMediaItems()
+            onComplete()
         }
+    }
+
+    /** Fetches the children of [mediaId] from the service and publishes them to [mediaItems]. */
+    private suspend fun loadMediaItems() {
+        val mediaItemList = musicServiceConnection.getChildren(mediaId)
+        val itemsList = mediaItemList.map { child ->
+            MediaItemData(
+                child,
+                child.mediaMetadata.isPlayable?.not() == true,
+                getResourceForMediaId(child.mediaId),
+                /* parentMediaId= */ mediaId
+            )
+        }
+        _mediaItems.postValue(itemsList)
     }
 
     /**

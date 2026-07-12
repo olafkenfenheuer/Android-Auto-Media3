@@ -66,6 +66,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
@@ -367,6 +368,21 @@ open class MusicService : MediaLibraryService() {
 
     open inner class MusicServiceCallback: MediaLibrarySession.Callback {
 
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): MediaSession.ConnectionResult {
+            // Advertise our custom "refresh catalog" command so controllers (the app's
+            // pull-to-refresh) are allowed to trigger a catalog reload via onCustomCommand.
+            val sessionCommands =
+                MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                    .add(SessionCommand(COMMAND_REFRESH_CATALOG, Bundle.EMPTY))
+                    .build()
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(sessionCommands)
+                .build()
+        }
+
         override fun onGetLibraryRoot(
             session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: LibraryParams?
         ): ListenableFuture<LibraryResult<MediaItem>> {
@@ -481,6 +497,18 @@ open class MusicService : MediaLibraryService() {
             customCommand: SessionCommand,
             args: Bundle
         ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == COMMAND_REFRESH_CATALOG) {
+                // Reload the remote catalog on demand (app pull-to-refresh). On success rebuild the
+                // browse tree and notify browsers; the future completes once the reload is done so
+                // the caller can stop its refresh spinner.
+                return serviceScope.future {
+                    if ((musicSource as? JsonSource)?.refresh() == true) {
+                        invalidateBrowseTree()
+                        notifyCatalogChanged()
+                    }
+                    SessionResult(SessionResult.RESULT_SUCCESS)
+                }
+            }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
         }
     }
@@ -538,6 +566,12 @@ private const val CONTENT_STYLE_LIST = 1
 private const val CONTENT_STYLE_GRID = 2
 
 const val MEDIA_DESCRIPTION_EXTRAS_START_PLAYBACK_POSITION_MS = "playback_start_position_ms"
+
+/**
+ * Custom session command a controller sends to make the service re-download the remote catalog on
+ * demand (used by the app's pull-to-refresh). Handled in [MusicService.MusicServiceCallback].
+ */
+const val COMMAND_REFRESH_CATALOG = "com.example.android.uamp.media.REFRESH_CATALOG"
 
 /** How often the station catalog is re-downloaded while the service is alive. Tune as needed. */
 private val CATALOG_REFRESH_INTERVAL_MS = TimeUnit.HOURS.toMillis(1)

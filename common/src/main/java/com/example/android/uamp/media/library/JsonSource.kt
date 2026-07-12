@@ -215,7 +215,7 @@ private var localJson = "{\n" +
         "      \"artist\": \"WDR\",\n" +
         "      \"genre\": \"Pop\",\n" +
         "      \"source\": \"https://wdr-wdr4-live.icecastssl.wdr.de/wdr/wdr4/live/mp3/128/stream.mp3\",\n" +
-        "      \"image\": \"https://www1.wdr.de/radio/wdr4/wdrvier_logo104~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/wdr4/wdrvier_logo104~_v-gseaclassicxl.jpg\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -228,7 +228,7 @@ private var localJson = "{\n" +
         "      \"artist\": \"WDR\",\n" +
         "      \"genre\": \"Pop\",\n" +
         "      \"source\": \"https://wdr-wdr5-live.icecastssl.wdr.de/wdr/wdr5/live/mp3/128/stream.mp3\",\n" +
-        "      \"image\": \"https://www1.wdr.de/radio/startseite/symbolbilder/wellen-logo100~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"image\": \"https://www1.wdr.de/radio/startseite/symbolbilder/wellen-logo100~_v-gseaclassicxl.jpg\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -241,7 +241,7 @@ private var localJson = "{\n" +
         "      \"artist\": \"WDR\",\n" +
         "      \"genre\": \"Pop\",\n" +
         "      \"source\": \"https://wdr-cosmo-live.icecastssl.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3\",\n" +
-        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/cosmo-logo108~_v-gseaclassicxl.jpg\" ,\n" +
+        "      \"image\": \"https://www1.wdr.de/mediathek/audio/sendereihen-bilder/cosmo-logo108~_v-gseaclassicxl.jpg\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -254,7 +254,7 @@ private var localJson = "{\n" +
         "      \"artist\": \"Bremen\",\n" +
         "      \"genre\": \"Pop\",\n" +
         "      \"source\": \"https://icecast.radiobremen.de/rb/bremenvier/live/mp3/128/stream.mp3\",\n" +
-        "      \"image\": \"https://dein.radiobremen.de/bilder/logo-bremenvier-100~_v-512x288_c-1589529238677.jpg\" ,\n" +
+        "      \"image\": \"https://dein.radiobremen.de/bilder/logo-bremenvier-100~_v-512x288_c-1589529238677.jpg\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -267,7 +267,7 @@ private var localJson = "{\n" +
         "      \"artist\": \"R.SH\",\n" +
         "      \"genre\": \"Pop\",\n" +
         "      \"source\": \"https://streams.rsh.de/rsh-live/mp3-128/streams.rsh.de/\",\n" +
-        "      \"image\": \"https://liveradio.de/media/cache/station_detail/1b7da8b7-588e-42a0-b519-27dfc348da8f.jpg\" ,\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/1b7da8b7-588e-42a0-b519-27dfc348da8f.jpg\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
@@ -279,15 +279,39 @@ private var localJson = "{\n" +
         "      \"album\": \"R.SH\",\n" +
         "      \"artist\": \"R.SH Sylt\",\n" +
         "      \"genre\": \"Pop\",\n" +
-        "      \"source\": \"https://streams.rsh.de/rsh-sylt/mp3-128/streams.rsh.de\",\n" +
-        "      \"image\": \"https://liveradio.de/media/cache/station_detail/600x600%20px.jpg\" ,\n" +
+        "      \"source\": \"https://streams.rsh.de/rsh-sylt/mp3-128/streams.rsh.de/\",\n" +
+        "      \"image\": \"https://liveradio.de/media/cache/station_detail/600x600%20px.jpg\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_10\",\n" +
+        "      \"title\": \"NDR 2\",\n" +
+        "      \"album\": \"NDR\",\n" +
+        "      \"artist\": \"NDR 2\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://icecast.ndr.de/ndr/ndr2/schleswigholstein/mp3/128/stream.mp3\",\n" +
+        "      \"image\": \"https://app.kenfenheuer.net/uamp/ndr2-sh.png\",\n" +
+        "      \"trackNumber\": 1,\n" +
+        "      \"totalTrackCount\": 1,\n" +
+        "      \"duration\": -1,\n" +
+        "      \"site\": \"https://www.wdr.de/\"\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"id\": \"wake_up_11\",\n" +
+        "      \"title\": \"ffn\",\n" +
+        "      \"album\": \"ffn\",\n" +
+        "      \"artist\": \"ffn\",\n" +
+        "      \"genre\": \"Pop\",\n" +
+        "      \"source\": \"https://stream.ffn.de/ffn/mp3-192\",\n" +
+        "      \"image\": \"https://app.kenfenheuer.net/uamp/ffn.png\",\n" +
         "      \"trackNumber\": 1,\n" +
         "      \"totalTrackCount\": 1,\n" +
         "      \"duration\": -1,\n" +
         "      \"site\": \"https://www.wdr.de/\"\n" +
         "    }\n" +
-        "\n" +
-        "\n" +
         "  ]\n" +
         "}";
 

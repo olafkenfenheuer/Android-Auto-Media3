@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit
         const val ORIGINAL_ARTWORK_URI_KEY = "com.example.android.uamp.JSON_ARTWORK_URI"
     }
 
+    @Volatile
     private var catalog: List<androidx.media3.common.MediaItem> = emptyList()
 
     init {
@@ -53,7 +54,9 @@ import java.util.concurrent.TimeUnit
     override fun iterator(): Iterator<MediaItem> = catalog.iterator()
 
     override suspend fun load() {
-        updateCatalog(source)?.let { updatedCatalog ->
+        // On the initial load we fall back to the bundled [localJson] when the network is
+        // unavailable, so the app always starts with a usable catalog.
+        updateCatalog(source, allowLocalFallback = true)?.let { updatedCatalog ->
             catalog = updatedCatalog
             state = STATE_INITIALIZED
         } ?: run {
@@ -63,13 +66,32 @@ import java.util.concurrent.TimeUnit
     }
 
     /**
+     * Re-downloads the catalog from the network and swaps it in **only on success**. Unlike [load],
+     * a failed refresh (e.g. no connectivity) returns `false` and leaves the currently loaded catalog
+     * untouched instead of falling back to the bundled [localJson] — so a periodic refresh can never
+     * downgrade a catalog that was previously fetched from the network. Safe to call while the source
+     * is already initialized; it does not change [state] (and therefore does not re-fire
+     * `whenReady` listeners).
+     *
+     * @return `true` if a fresh catalog was downloaded and swapped in, `false` otherwise.
+     */
+    suspend fun refresh(): Boolean {
+        val updatedCatalog = updateCatalog(source, allowLocalFallback = false) ?: return false
+        catalog = updatedCatalog
+        return true
+    }
+
+    /**
      * Function to connect to a remote URI and download/process the JSON file that corresponds to
      * [MediaMetadataCompat] objects.
+     *
+     * @param allowLocalFallback when `true`, a network failure falls back to the bundled
+     * [localJson]; when `false`, a network failure results in `null` so callers can detect it.
      */
-    private suspend fun updateCatalog(catalogUri: Uri): List<MediaItem>? {
+    private suspend fun updateCatalog(catalogUri: Uri, allowLocalFallback: Boolean): List<MediaItem>? {
         return withContext(Dispatchers.IO) {
             val musicCat = try {
-                downloadJson(catalogUri)
+                downloadJson(catalogUri, allowLocalFallback)
             } catch (ioException: IOException) {
                 return@withContext null
             }
@@ -128,11 +150,14 @@ import java.util.concurrent.TimeUnit
     }
 }
 */
-private fun downloadJson(catalogUri: Uri): JsonCatalog {
+private fun downloadJson(catalogUri: Uri, allowLocalFallback: Boolean): JsonCatalog {
     val catalogConn = URL(catalogUri.toString())
     val reader =  try {
         BufferedReader(InputStreamReader(catalogConn.openStream()))
     } catch (ioException: IOException) {
+        // Without a network connection, optionally fall back to the bundled catalog. A refresh
+        // passes `false` here so the failure propagates and the existing catalog is kept.
+        if (!allowLocalFallback) throw ioException
         BufferedReader(InputStreamReader(localJson.byteInputStream(Charset.defaultCharset())))
     }
 

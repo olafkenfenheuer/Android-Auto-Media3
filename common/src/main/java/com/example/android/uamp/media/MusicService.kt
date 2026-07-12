@@ -53,8 +53,10 @@ import com.example.android.uamp.media.library.BrowseTree
 import com.example.android.uamp.media.library.JsonSource
 import com.example.android.uamp.media.library.MEDIA_SEARCH_SUPPORTED
 import com.example.android.uamp.media.library.MusicSource
+import com.example.android.uamp.media.library.UAMP_ALBUMS_ROOT
 import com.example.android.uamp.media.library.UAMP_BROWSABLE_ROOT
 import com.example.android.uamp.media.library.UAMP_RECENT_ROOT
+import com.example.android.uamp.media.library.UAMP_RECOMMENDED_ROOT
 import com.google.android.gms.cast.framework.CastContext
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -63,8 +65,11 @@ import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 /**
@@ -91,12 +96,26 @@ open class MusicService : MediaLibraryService() {
     private lateinit var packageValidator: PackageValidator
     private lateinit var storage: PersistentStorage
 
+    private val browseTreeLock = Any()
+
     /**
-     * This must be `by lazy` because the [musicSource] won't initially be ready. Use
-     * [callWhenMusicSourceReady] to be sure it is safely ready for usage.
+     * Cached [BrowseTree] built from the current [musicSource]. It is built lazily on first access
+     * (the [musicSource] won't initially be ready — use [callWhenMusicSourceReady] to be sure it is)
+     * and rebuilt from scratch after a periodic catalog refresh by calling [invalidateBrowseTree].
      */
-    private val browseTree: BrowseTree by lazy {
-        BrowseTree(applicationContext, musicSource)
+    @Volatile
+    private var browseTreeCache: BrowseTree? = null
+
+    private val browseTree: BrowseTree
+        get() = browseTreeCache ?: synchronized(browseTreeLock) {
+            browseTreeCache ?: BrowseTree(applicationContext, musicSource).also {
+                browseTreeCache = it
+            }
+        }
+
+    /** Drops the cached [BrowseTree] so the next access rebuilds it from the current catalog. */
+    private fun invalidateBrowseTree() {
+        synchronized(browseTreeLock) { browseTreeCache = null }
     }
 
     private val recentRootMediaItem: MediaItem by lazy {
@@ -220,9 +239,40 @@ open class MusicService : MediaLibraryService() {
         serviceScope.launch {
             musicSource.load()
         }
+        startPeriodicCatalogRefresh()
 
         packageValidator = PackageValidator(this, R.xml.allowed_media_browser_callers)
         storage = PersistentStorage.getInstance(applicationContext)
+    }
+
+    /**
+     * Periodically re-downloads the station catalog so long-running sessions (e.g. Android Auto left
+     * connected for hours) pick up server-side catalog changes without restarting the app. A refresh
+     * that can't reach the network is a no-op that keeps the current catalog in place; playback of
+     * the current station is never interrupted (only the browsable catalog is rebuilt). The loop is
+     * bound to [serviceScope], so it stops when the service is destroyed.
+     */
+    private fun startPeriodicCatalogRefresh() {
+        serviceScope.launch {
+            while (isActive) {
+                delay(CATALOG_REFRESH_INTERVAL_MS)
+                val source = musicSource as? JsonSource ?: continue
+                if (source.refresh()) {
+                    // Rebuild the browse tree from the refreshed catalog and tell subscribed
+                    // browsers (Android Auto, the app UI) to reload the affected nodes.
+                    invalidateBrowseTree()
+                    notifyCatalogChanged()
+                }
+            }
+        }
+    }
+
+    /** Notifies subscribed browsers that the browsable catalog roots changed after a refresh. */
+    private fun notifyCatalogChanged() {
+        for (parentId in listOf(UAMP_BROWSABLE_ROOT, UAMP_ALBUMS_ROOT, UAMP_RECOMMENDED_ROOT)) {
+            val itemCount = browseTree[parentId]?.size ?: 0
+            mediaSession.notifyChildrenChanged(parentId, itemCount, null)
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
@@ -488,5 +538,8 @@ private const val CONTENT_STYLE_LIST = 1
 private const val CONTENT_STYLE_GRID = 2
 
 const val MEDIA_DESCRIPTION_EXTRAS_START_PLAYBACK_POSITION_MS = "playback_start_position_ms"
+
+/** How often the station catalog is re-downloaded while the service is alive. Tune as needed. */
+private val CATALOG_REFRESH_INTERVAL_MS = TimeUnit.HOURS.toMillis(1)
 
 private const val TAG = "MusicService"

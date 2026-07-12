@@ -17,6 +17,7 @@
 package com.example.android.uamp
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -53,7 +54,7 @@ class MediaItemAdapter(
             payloads.forEach { payload ->
                 when (payload) {
                     PLAYBACK_RES_CHANGED -> {
-                        holder.playbackState.setImageResource(itemData.playbackRes)
+                        holder.bindPlaybackState(itemData.playbackRes)
                     }
                     // If the payload wasn't understood, refresh the full item (to be safe).
                     else -> fullRefresh = true
@@ -68,7 +69,7 @@ class MediaItemAdapter(
             holder.item = itemData
             holder.titleView.text = itemData.title
             holder.subtitleView.text = itemData.subtitle
-            holder.playbackState.setImageResource(itemData.playbackRes)
+            holder.bindPlaybackState(itemData.playbackRes)
 
             Glide.with(holder.albumArt)
                 .load(itemData.mediaItem.mediaMetadata.artworkUri)
@@ -98,5 +99,15 @@ class MediaViewHolder(
         binding.root.setOnClickListener {
             item?.let { itemClickedListener(it) }
         }
+    }
+
+    /**
+     * Shows the play/pause state icon together with its darkening scrim only for the currently
+     * playing item ([playbackRes] != 0). When nothing is playing on this item the whole overlay is
+     * hidden so the artwork (e.g. a full-bleed station logo) is never obscured.
+     */
+    fun bindPlaybackState(playbackRes: Int) {
+        playbackState.setImageResource(playbackRes)
+        playbackState.visibility = if (playbackRes == 0) View.INVISIBLE else View.VISIBLE
     }
 }

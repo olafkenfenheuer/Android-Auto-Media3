@@ -21,6 +21,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.TextureView
 import androidx.annotation.OptIn
+import androidx.annotation.VisibleForTesting
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
@@ -426,46 +427,8 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         return applyStreamTitle(player.mediaMetadata)
     }
 
-    /**
-     * Overlays the song currently on air (reported live by the stream as ICY metadata, see
-     * [currentStreamTitle]) on top of the static station metadata. The ICY "StreamTitle" is a single
-     * "Interpret - Titel" string, so it is split into [MediaMetadata.artist] and
-     * [MediaMetadata.title] and the station name is preserved in [MediaMetadata.station]. Returns the
-     * unchanged station metadata when the stream reports no song (or only echoes the station name).
-     *
-     * A few stations (see [REVERSED_TITLE_STATIONS]) send "Titel - Interpret" instead, so the two
-     * halves are swapped for them.
-     */
-    private fun applyStreamTitle(base: MediaMetadata): MediaMetadata {
-        val streamTitle = currentStreamTitle?.trim()
-        if (streamTitle.isNullOrEmpty() || streamTitle == base.title?.toString()) {
-            return base
-        }
-        val builder = base.buildUpon().setStation(base.title)
-        val separator = streamTitle.indexOf(" - ")
-        if (separator > 0) {
-            val left = streamTitle.substring(0, separator).trim()
-            val right = streamTitle.substring(separator + 3).trim()
-            if (base.title?.toString() in REVERSED_TITLE_STATIONS) {
-                builder.setSongTitle(left).setArtist(right).setSubtitle(right)
-            } else {
-                builder.setArtist(left).setSubtitle(left).setSongTitle(right)
-            }
-        } else {
-            builder.setArtist(null).setSubtitle(null).setSongTitle(streamTitle)
-        }
-        return builder.build()
-    }
-
-    /**
-     * Sets the song title in both [MediaMetadata.title] and [MediaMetadata.displayTitle]. The static
-     * catalog metadata puts the station name in `displayTitle` (see JsonSource), and Android Auto's
-     * "Now Playing" screen prefers `displayTitle`/`subtitle` over `title`/`artist`. Overwriting only
-     * `title` therefore left Android Auto showing the station name instead of the current song, so we
-     * update both fields here.
-     */
-    private fun MediaMetadata.Builder.setSongTitle(title: String) =
-        setTitle(title).setDisplayTitle(title)
+    private fun applyStreamTitle(base: MediaMetadata): MediaMetadata =
+        mergeStreamTitle(base, currentStreamTitle)
 
     override fun getPlaylistMetadata(): MediaMetadata {
         return player.playlistMetadata
@@ -762,5 +725,49 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         // Stations whose ICY StreamTitle is "Titel - Interpret" instead of the usual
         // "Interpret - Titel" (matched by station name); their two halves are swapped.
         private val REVERSED_TITLE_STATIONS = setOf("NDR 2")
+
+        /**
+         * Overlays the song currently on air (reported live by the stream as ICY [streamTitle]) on
+         * top of the static station metadata [base]. The ICY "StreamTitle" is a single
+         * "Interpret - Titel" string, so it is split into [MediaMetadata.artist]/[MediaMetadata.title]
+         * (and mirrored into [MediaMetadata.subtitle]/[MediaMetadata.displayTitle], the fields Android
+         * Auto's "Now Playing" screen prefers), and the station name is preserved in
+         * [MediaMetadata.station]. Returns the unchanged station metadata when the stream reports no
+         * song (or only echoes the station name).
+         *
+         * A few stations (see [REVERSED_TITLE_STATIONS]) send "Titel - Interpret" instead, so the two
+         * halves are swapped for them.
+         */
+        @VisibleForTesting
+        internal fun mergeStreamTitle(base: MediaMetadata, streamTitle: String?): MediaMetadata {
+            val trimmed = streamTitle?.trim()
+            if (trimmed.isNullOrEmpty() || trimmed == base.title?.toString()) {
+                return base
+            }
+            val builder = base.buildUpon().setStation(base.title)
+            val separator = trimmed.indexOf(" - ")
+            if (separator > 0) {
+                val left = trimmed.substring(0, separator).trim()
+                val right = trimmed.substring(separator + 3).trim()
+                if (base.title?.toString() in REVERSED_TITLE_STATIONS) {
+                    builder.setSongTitle(left).setArtist(right).setSubtitle(right)
+                } else {
+                    builder.setArtist(left).setSubtitle(left).setSongTitle(right)
+                }
+            } else {
+                builder.setArtist(null).setSubtitle(null).setSongTitle(trimmed)
+            }
+            return builder.build()
+        }
+
+        /**
+         * Sets the song title in both [MediaMetadata.title] and [MediaMetadata.displayTitle]. The
+         * static catalog metadata puts the station name in `displayTitle` (see JsonSource), and
+         * Android Auto's "Now Playing" screen prefers `displayTitle`/`subtitle` over `title`/`artist`.
+         * Overwriting only `title` therefore left Android Auto showing the station name instead of the
+         * current song, so we update both fields here.
+         */
+        private fun MediaMetadata.Builder.setSongTitle(title: String) =
+            setTitle(title).setDisplayTitle(title)
     }
 }

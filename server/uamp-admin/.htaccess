@@ -1,0 +1,11 @@
+# Restrict the admin page to the local network. The rest of the directory
+# (notably music.json, which the Android app downloads) stays publicly reachable.
+#
+# Requires Apache 2.4+ and AllowOverride AuthConfig (or All) for /var/www/html/uamp
+# so this .htaccess is honored — otherwise use the equivalent <Files> block in the
+# site's vhost config instead (see README.md).
+<Files "index.php">
+    Require ip 192.168.120.0/24
+    Require ip 192.168.122.0/24
+    Require ip 127.0.0.1 ::1
+</Files>

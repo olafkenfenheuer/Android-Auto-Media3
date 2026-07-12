@@ -432,6 +432,9 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
      * "Interpret - Titel" string, so it is split into [MediaMetadata.artist] and
      * [MediaMetadata.title] and the station name is preserved in [MediaMetadata.station]. Returns the
      * unchanged station metadata when the stream reports no song (or only echoes the station name).
+     *
+     * A few stations (see [REVERSED_TITLE_STATIONS]) send "Titel - Interpret" instead, so the two
+     * halves are swapped for them.
      */
     private fun applyStreamTitle(base: MediaMetadata): MediaMetadata {
         val streamTitle = currentStreamTitle?.trim()
@@ -441,8 +444,15 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
         val builder = base.buildUpon().setStation(base.title)
         val separator = streamTitle.indexOf(" - ")
         if (separator > 0) {
-            builder.setArtist(streamTitle.substring(0, separator).trim())
-            builder.setTitle(streamTitle.substring(separator + 3).trim())
+            val left = streamTitle.substring(0, separator).trim()
+            val right = streamTitle.substring(separator + 3).trim()
+            if (base.title?.toString() in REVERSED_TITLE_STATIONS) {
+                builder.setTitle(left)
+                builder.setArtist(right)
+            } else {
+                builder.setArtist(left)
+                builder.setTitle(right)
+            }
         } else {
             builder.setArtist(null)
             builder.setTitle(streamTitle)
@@ -739,5 +749,11 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
                 }
             }
         }
+    }
+
+    companion object {
+        // Stations whose ICY StreamTitle is "Titel - Interpret" instead of the usual
+        // "Interpret - Titel" (matched by station name); their two halves are swapped.
+        private val REVERSED_TITLE_STATIONS = setOf("NDR 2")
     }
 }

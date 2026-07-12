@@ -77,6 +77,28 @@ function redirect_self(): void
     exit;
 }
 
+/** Builds a station entry from the POST fields ($id/$title/$source are already validated). */
+function station_from_post(string $id, string $title, string $source): array
+{
+    $num = static function (string $key, int $default): int {
+        $raw = trim((string)($_POST[$key] ?? ''));
+        return $raw === '' ? $default : (int)$raw;
+    };
+    return [
+        'id'              => $id,
+        'title'           => $title,
+        'album'           => trim((string)($_POST['album'] ?? '')),
+        'artist'          => trim((string)($_POST['artist'] ?? '')),
+        'genre'           => trim((string)($_POST['genre'] ?? '')),
+        'source'          => $source,
+        'image'           => trim((string)($_POST['image'] ?? '')),
+        'trackNumber'     => $num('trackNumber', 1),
+        'totalTrackCount' => $num('totalTrackCount', 1),
+        'duration'        => $num('duration', -1),
+        'site'            => trim((string)($_POST['site'] ?? '')),
+    ];
+}
+
 // ---- Handle mutations (Post/Redirect/Get to avoid resubmission) --------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $catalog = load_catalog(JSON_FILE);
@@ -104,24 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect_self();
         }
 
-        $num = static function (string $key, int $default): int {
-            $raw = trim((string)($_POST[$key] ?? ''));
-            return $raw === '' ? $default : (int)$raw;
-        };
-
-        $music[] = [
-            'id'              => $id,
-            'title'           => $title,
-            'album'           => trim((string)($_POST['album'] ?? '')),
-            'artist'          => trim((string)($_POST['artist'] ?? '')),
-            'genre'           => trim((string)($_POST['genre'] ?? '')),
-            'source'          => $source,
-            'image'           => trim((string)($_POST['image'] ?? '')),
-            'trackNumber'     => $num('trackNumber', 1),
-            'totalTrackCount' => $num('totalTrackCount', 1),
-            'duration'        => $num('duration', -1),
-            'site'            => trim((string)($_POST['site'] ?? '')),
-        ];
+        $music[] = station_from_post($id, $title, $source);
 
         $catalog['music'] = $music;
         $saved = save_catalog(JSON_FILE, $catalog);
@@ -129,6 +134,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $saved ? 'ok' : 'error',
             $saved
                 ? 'Sender "' . $title . '" hinzugefügt (ID: ' . $id . ').'
+                : 'Schreiben fehlgeschlagen — Dateirechte auf music.json prüfen.'
+        );
+        redirect_self();
+    }
+
+    if ($action === 'update') {
+        $originalId = (string)($_POST['original_id'] ?? '');
+        $idx = null;
+        foreach ($music as $i => $m) {
+            if (($m['id'] ?? '') === $originalId) {
+                $idx = $i;
+                break;
+            }
+        }
+        if ($idx === null) {
+            flash('error', 'Kein Sender mit ID "' . $originalId . '" gefunden.');
+            redirect_self();
+        }
+
+        $title = trim((string)($_POST['title'] ?? ''));
+        $source = trim((string)($_POST['source'] ?? ''));
+        if ($title === '' || $source === '') {
+            flash('error', 'Titel und Stream-URL (source) sind Pflichtfelder.');
+            redirect_self();
+        }
+        if (!preg_match('#^https?://#i', $source)) {
+            flash('error', 'Die Stream-URL muss mit http:// oder https:// beginnen.');
+            redirect_self();
+        }
+
+        // Keep the original id if the field was cleared; otherwise ensure the new id is unique.
+        $id = trim((string)($_POST['id'] ?? '')) ?: $originalId;
+        foreach ($music as $i => $m) {
+            if ($i !== $idx && ($m['id'] ?? '') === $id) {
+                flash('error', 'Die ID "' . $id . '" existiert bereits.');
+                redirect_self();
+            }
+        }
+
+        $music[$idx] = station_from_post($id, $title, $source);
+
+        $catalog['music'] = $music;
+        $saved = save_catalog(JSON_FILE, $catalog);
+        flash(
+            $saved ? 'ok' : 'error',
+            $saved
+                ? 'Sender "' . $title . '" gespeichert.'
                 : 'Schreiben fehlgeschlagen — Dateirechte auf music.json prüfen.'
         );
         redirect_self();
@@ -166,10 +218,26 @@ $writable = is_writable(JSON_FILE) || (!is_file(JSON_FILE) && is_writable(__DIR_
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 
+// Edit mode: ?edit=<id> pre-fills the form with that station's values.
+$editId = isset($_GET['edit']) ? (string)$_GET['edit'] : '';
+$editing = null;
+foreach ($stations as $s) {
+    if (($s['id'] ?? '') === $editId && $editId !== '') {
+        $editing = $s;
+        break;
+    }
+}
+
 /** htmlspecialchars shortcut. */
 function h($v): string
 {
     return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+}
+
+/** Returns a form field's current value: the edited station's value, else a default. */
+function fv(?array $editing, string $key, $default = '')
+{
+    return $editing[$key] ?? $default;
 }
 ?>
 <!doctype html>
@@ -230,7 +298,14 @@ function h($v): string
         .btn:hover { filter: brightness(1.08); }
         .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-weight: 500; }
         .btn-danger:hover { background: var(--danger); color: #fff; }
-        .actions { margin-top: 16px; }
+        .btn-edit {
+            display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 14px;
+            border: 1px solid var(--accent); color: var(--accent); margin-right: 6px;
+        }
+        .btn-edit:hover { background: var(--accent); color: #fff; text-decoration: none; }
+        td.nowrap { white-space: nowrap; }
+        tr.editing { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        .actions { margin-top: 16px; display: flex; align-items: center; gap: 14px; }
         .muted { color: var(--muted); font-size: 12px; }
         @media (max-width: 640px) {
             .grid, .row3 { grid-template-columns: 1fr; }
@@ -272,7 +347,7 @@ function h($v): string
                 </thead>
                 <tbody>
                 <?php foreach ($stations as $s): ?>
-                    <tr>
+                    <tr<?= ($editId !== '' && ($s['id'] ?? '') === $editId) ? ' class="editing"' : '' ?>>
                         <td>
                             <?php if (!empty($s['image'])): ?>
                                 <img class="thumb" src="<?= h($s['image']) ?>" alt="" loading="lazy">
@@ -287,7 +362,8 @@ function h($v): string
                         <td class="small">
                             <a href="<?= h($s['source'] ?? '') ?>" target="_blank" rel="noopener">öffnen ↗</a>
                         </td>
-                        <td>
+                        <td class="nowrap">
+                            <a class="btn-edit" href="?edit=<?= h(rawurlencode($s['id'] ?? '')) ?>#form">Bearbeiten</a>
                             <form class="inline" method="post"
                                   onsubmit="return confirm('Sender „<?= h($s['title'] ?? '') ?>“ wirklich löschen?');">
                                 <input type="hidden" name="action" value="delete">
@@ -302,60 +378,71 @@ function h($v): string
         <?php endif; ?>
     </div>
 
-    <div class="card">
-        <h2 style="margin:0 0 14px;font-size:16px;">Sender hinzufügen</h2>
+    <div class="card" id="form">
+        <h2 style="margin:0 0 14px;font-size:16px;">
+            <?= $editing ? 'Sender bearbeiten' : 'Sender hinzufügen' ?>
+            <?php if ($editing): ?>
+                <span class="muted">— <?= h($editing['title'] ?? '') ?></span>
+            <?php endif; ?>
+        </h2>
         <form method="post">
-            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="action" value="<?= $editing ? 'update' : 'add' ?>">
+            <?php if ($editing): ?>
+                <input type="hidden" name="original_id" value="<?= h($editing['id'] ?? '') ?>">
+            <?php endif; ?>
             <div class="grid">
                 <div class="full">
                     <label>Titel * (wird in der App und in Android Auto angezeigt)</label>
-                    <input name="title" required placeholder="z. B. WDR 2">
+                    <input name="title" required placeholder="z. B. WDR 2" value="<?= h(fv($editing, 'title')) ?>">
                 </div>
                 <div class="full">
                     <label>Stream-URL (source) *</label>
-                    <input name="source" required type="url" placeholder="https://…/stream.mp3">
+                    <input name="source" required type="url" placeholder="https://…/stream.mp3" value="<?= h(fv($editing, 'source')) ?>">
                 </div>
                 <div class="full">
                     <label>Bild-URL (image) — Sender-Logo / Artwork</label>
-                    <input name="image" type="url" placeholder="https://…/logo.jpg">
+                    <input name="image" type="url" placeholder="https://…/logo.jpg" value="<?= h(fv($editing, 'image')) ?>">
                 </div>
                 <div>
                     <label>Album</label>
-                    <input name="album" placeholder="z. B. WDR">
+                    <input name="album" placeholder="z. B. WDR" value="<?= h(fv($editing, 'album')) ?>">
                 </div>
                 <div>
                     <label>Artist</label>
-                    <input name="artist" placeholder="z. B. WDR">
+                    <input name="artist" placeholder="z. B. WDR" value="<?= h(fv($editing, 'artist')) ?>">
                 </div>
                 <div>
                     <label>Genre</label>
-                    <input name="genre" placeholder="z. B. Pop">
+                    <input name="genre" placeholder="z. B. Pop" value="<?= h(fv($editing, 'genre')) ?>">
                 </div>
                 <div>
                     <label>Website (site)</label>
-                    <input name="site" type="url" placeholder="https://…">
+                    <input name="site" type="url" placeholder="https://…" value="<?= h(fv($editing, 'site')) ?>">
                 </div>
                 <div class="full">
-                    <label>ID (optional — wird sonst aus dem Titel erzeugt, muss eindeutig sein)</label>
-                    <input name="id" placeholder="z. B. wdr2">
+                    <label>ID <?= $editing ? '(ändern ist möglich, muss eindeutig sein)' : '(optional — wird sonst aus dem Titel erzeugt, muss eindeutig sein)' ?></label>
+                    <input name="id" placeholder="z. B. wdr2" value="<?= h(fv($editing, 'id')) ?>">
                 </div>
             </div>
             <div class="row3" style="margin-top:12px;">
                 <div>
                     <label>trackNumber</label>
-                    <input name="trackNumber" type="number" value="1">
+                    <input name="trackNumber" type="number" value="<?= h(fv($editing, 'trackNumber', 1)) ?>">
                 </div>
                 <div>
                     <label>totalTrackCount</label>
-                    <input name="totalTrackCount" type="number" value="1">
+                    <input name="totalTrackCount" type="number" value="<?= h(fv($editing, 'totalTrackCount', 1)) ?>">
                 </div>
                 <div>
                     <label>duration (Sek., −1 = Livestream)</label>
-                    <input name="duration" type="number" value="-1">
+                    <input name="duration" type="number" value="<?= h(fv($editing, 'duration', -1)) ?>">
                 </div>
             </div>
             <div class="actions">
-                <button class="btn" type="submit">Hinzufügen</button>
+                <button class="btn" type="submit"><?= $editing ? 'Speichern' : 'Hinzufügen' ?></button>
+                <?php if ($editing): ?>
+                    <a href="<?= h(strtok($_SERVER['REQUEST_URI'], '?')) ?>">Abbrechen</a>
+                <?php endif; ?>
                 <span class="muted">* Pflichtfeld</span>
             </div>
         </form>

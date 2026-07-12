@@ -7,6 +7,7 @@ Verzeichnis** (`__DIR__/music.json`).
 ## Funktionen
 - Liste aller Sender mit Logo-Vorschau und Stream-Link
 - Sender hinzufügen (Titel + Stream-URL Pflicht; ID wird sonst aus dem Titel erzeugt)
+- Sender bearbeiten (Button „Bearbeiten" füllt das Formular vor; `?edit=<id>`, Position bleibt erhalten, ID änderbar mit Eindeutigkeitsprüfung)
 - Sender löschen (mit Bestätigung)
 - Atomares Schreiben (`.tmp` → `rename`) und automatisches Backup in `music.json.bak`
 - JSON-Schema identisch zu `JsonMusic` der App: `id, title, album, artist, genre, source,

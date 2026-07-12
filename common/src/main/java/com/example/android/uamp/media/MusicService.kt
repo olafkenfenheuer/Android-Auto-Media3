@@ -40,7 +40,10 @@ import androidx.media3.common.Player.EVENT_PLAY_WHEN_READY_CHANGED
 import androidx.media3.common.Player.EVENT_POSITION_DISCONTINUITY
 import androidx.media3.common.Player.Listener
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -140,7 +143,15 @@ open class MusicService : MediaLibraryService() {
      * for details.
      */
     private val exoPlayer: Player by lazy {
-        val player = ExoPlayer.Builder(this).build().apply {
+        // Follow cross-protocol (http -> https) redirects so streams that answer with a 302
+        // (e.g. some station URLs) load instead of failing with ERROR_CODE_IO_BAD_HTTP_STATUS.
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(DefaultDataSource.Factory(this, httpDataSourceFactory))
+        val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .build().apply {
             setAudioAttributes(uAmpAudioAttributes, true)
             setHandleAudioBecomingNoisy(true)
             addListener(playerListener)

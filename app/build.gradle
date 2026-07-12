@@ -47,7 +47,7 @@ android {
         multiDexEnabled true
 
         versionCode vcode
-        versionName "2.6."+vcode
+        versionName "3.0."+vcode
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         setProperty("archivesBaseName", "InternetRadio-"+versionName)
 
@@ -72,6 +72,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

@@ -447,18 +447,25 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
             val left = streamTitle.substring(0, separator).trim()
             val right = streamTitle.substring(separator + 3).trim()
             if (base.title?.toString() in REVERSED_TITLE_STATIONS) {
-                builder.setTitle(left)
-                builder.setArtist(right)
+                builder.setSongTitle(left).setArtist(right).setSubtitle(right)
             } else {
-                builder.setArtist(left)
-                builder.setTitle(right)
+                builder.setArtist(left).setSubtitle(left).setSongTitle(right)
             }
         } else {
-            builder.setArtist(null)
-            builder.setTitle(streamTitle)
+            builder.setArtist(null).setSubtitle(null).setSongTitle(streamTitle)
         }
         return builder.build()
     }
+
+    /**
+     * Sets the song title in both [MediaMetadata.title] and [MediaMetadata.displayTitle]. The static
+     * catalog metadata puts the station name in `displayTitle` (see JsonSource), and Android Auto's
+     * "Now Playing" screen prefers `displayTitle`/`subtitle` over `title`/`artist`. Overwriting only
+     * `title` therefore left Android Auto showing the station name instead of the current song, so we
+     * update both fields here.
+     */
+    private fun MediaMetadata.Builder.setSongTitle(title: String) =
+        setTitle(title).setDisplayTitle(title)
 
     override fun getPlaylistMetadata(): MediaMetadata {
         return player.playlistMetadata

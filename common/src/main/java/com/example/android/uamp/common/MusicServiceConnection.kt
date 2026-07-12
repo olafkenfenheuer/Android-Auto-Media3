@@ -25,6 +25,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
 import androidx.media3.common.PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED
@@ -153,17 +154,45 @@ class MusicServiceConnection(context: Context, serviceComponent: ComponentName) 
         if (mediaItem == MediaItem.EMPTY) {
             return
         }
+        // The song currently on air is delivered live by the stream (ICY metadata) and folded into
+        // player.mediaMetadata by ReplaceableForwardingPlayer (title = song, artist = interpreter).
+        // Capture it now; the catalog item fetched below only carries the static station name and
+        // artwork.
+        val streamMetadata = player.mediaMetadata
         // The current media item from the CastPlayer may have lost some information.
         val mediaItemFuture = browser!!.getItem(mediaItem.mediaId)
         mediaItemFuture.addListener(
             Runnable {
                 val fullMediaItem = mediaItemFuture.get().value ?: return@Runnable
                 nowPlaying.postValue(
-                    mediaItem.buildUpon().setMediaMetadata(fullMediaItem.mediaMetadata).build()
+                    mediaItem.buildUpon()
+                        .setMediaMetadata(mergeStreamMetadata(fullMediaItem.mediaMetadata, streamMetadata))
+                        .build()
                 )
             },
             MoreExecutors.directExecutor()
         )
+    }
+
+    /**
+     * Overlays the song currently on air (song title / interpreter from [streamMetadata]) on top of
+     * the static station metadata (name / artwork) so the UI can show both. Falls back to the plain
+     * station metadata when the stream reports no song (or only echoes the station name).
+     */
+    private fun mergeStreamMetadata(
+        stationMetadata: MediaMetadata,
+        streamMetadata: MediaMetadata
+    ): MediaMetadata {
+        val song = streamMetadata.title?.toString()
+        if (song.isNullOrEmpty() || song == stationMetadata.title?.toString()) {
+            return stationMetadata
+        }
+        return stationMetadata.buildUpon()
+            .setTitle(streamMetadata.title)
+            .setArtist(streamMetadata.artist)
+            // Keep the station name available for Android Auto / the lock screen.
+            .setStation(stationMetadata.title)
+            .build()
     }
 
     companion object {

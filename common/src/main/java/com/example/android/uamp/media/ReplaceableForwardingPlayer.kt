@@ -25,6 +25,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -54,6 +55,10 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
     // having disconnected.
     private val playlist: MutableList<MediaItem> = arrayListOf()
     private var currentMediaItemIndex: Int = 0
+    // The "StreamTitle" (usually "Interpret - Titel") reported live by the currently playing ICY
+    // stream. ExoPlayer delivers it via onMetadata but does not fold it into getMediaMetadata(), so
+    // we track it here and merge it in [applyStreamTitle]. Reset whenever the media item changes.
+    private var currentStreamTitle: String? = null
 
     private val playerListener: Player.Listener = PlayerListener()
 
@@ -418,7 +423,31 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
     }
 
     override fun getMediaMetadata(): MediaMetadata {
-        return player.mediaMetadata
+        return applyStreamTitle(player.mediaMetadata)
+    }
+
+    /**
+     * Overlays the song currently on air (reported live by the stream as ICY metadata, see
+     * [currentStreamTitle]) on top of the static station metadata. The ICY "StreamTitle" is a single
+     * "Interpret - Titel" string, so it is split into [MediaMetadata.artist] and
+     * [MediaMetadata.title] and the station name is preserved in [MediaMetadata.station]. Returns the
+     * unchanged station metadata when the stream reports no song (or only echoes the station name).
+     */
+    private fun applyStreamTitle(base: MediaMetadata): MediaMetadata {
+        val streamTitle = currentStreamTitle?.trim()
+        if (streamTitle.isNullOrEmpty() || streamTitle == base.title?.toString()) {
+            return base
+        }
+        val builder = base.buildUpon().setStation(base.title)
+        val separator = streamTitle.indexOf(" - ")
+        if (separator > 0) {
+            builder.setArtist(streamTitle.substring(0, separator).trim())
+            builder.setTitle(streamTitle.substring(separator + 3).trim())
+        } else {
+            builder.setArtist(null)
+            builder.setTitle(streamTitle)
+        }
+        return builder.build()
     }
 
     override fun getPlaylistMetadata(): MediaMetadata {
@@ -667,6 +696,10 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
 
     private inner class PlayerListener : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(EVENT_MEDIA_ITEM_TRANSITION)) {
+                // A new station is playing; drop the previous station's song info.
+                currentStreamTitle = null
+            }
             if (events.contains(EVENT_MEDIA_ITEM_TRANSITION)
                 && !events.contains(EVENT_MEDIA_METADATA_CHANGED)) {
                 // CastPlayer does not support onMetaDataChange. We can trigger this here when the
@@ -684,6 +717,25 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
                 || events.contains(EVENT_TIMELINE_CHANGED)) {
                 if (!player.currentTimeline.isEmpty) {
                     currentMediaItemIndex = player.currentMediaItemIndex
+                }
+            }
+        }
+
+        override fun onMetadata(metadata: Metadata) {
+            // Live radio streams report the current song via ICY "StreamTitle" metadata. ExoPlayer
+            // surfaces it here but does not fold it into getMediaMetadata(), so extract it (via the
+            // generic Metadata.Entry -> MediaMetadata population), remember it and notify listeners
+            // so the session/UI refresh with the new song.
+            val builder = MediaMetadata.Builder()
+            for (i in 0 until metadata.length()) {
+                metadata.get(i).populateMediaMetadata(builder)
+            }
+            val streamTitle = builder.build().title?.toString()
+            if (!streamTitle.isNullOrEmpty() && streamTitle != currentStreamTitle) {
+                currentStreamTitle = streamTitle
+                val merged = mediaMetadata
+                for (listener in listeners) {
+                    listener.onMediaMetadataChanged(merged)
                 }
             }
         }

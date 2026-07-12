@@ -114,7 +114,9 @@ class NowPlayingFragment : Fragment() {
                 .load(metadata.artworkUri)
                 .into(albumArt)
         }
+        // When the stream reports a song, [title] is the song title and [artist] the interpreter;
+        // otherwise these fall back to the station name and group.
         title.text = metadata.title
-        subtitle.text = metadata.albumTitle
+        subtitle.text = if (!metadata.artist.isNullOrEmpty()) metadata.artist else metadata.albumTitle
     }
 }

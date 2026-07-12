@@ -40,7 +40,6 @@ import androidx.media3.common.Player.EVENT_PLAY_WHEN_READY_CHANGED
 import androidx.media3.common.Player.EVENT_POSITION_DISCONTINUITY
 import androidx.media3.common.Player.Listener
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -148,7 +147,7 @@ open class MusicService : MediaLibraryService() {
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(DefaultDataSource.Factory(this, httpDataSourceFactory))
+            .setDataSourceFactory(httpDataSourceFactory)
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)
             .build().apply {

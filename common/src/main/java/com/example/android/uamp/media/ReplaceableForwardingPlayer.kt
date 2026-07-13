@@ -255,15 +255,27 @@ class ReplaceableForwardingPlayer(private var player: Player) : Player {
     }
 
     override fun play() {
+        // These are live radio streams. If playback was stopped on pause (see [pause]) the player
+        // is in STATE_IDLE, so re-prepare it: this reconnects to the stream and resumes at the live
+        // edge instead of replaying stale buffered audio, so there is no offset from live.
+        if (player.playbackState == Player.STATE_IDLE) {
+            player.prepare()
+        }
         player.play()
     }
 
     override fun pause() {
-        player.pause()
+        // For live radio we don't want the player to keep spooling the stream into its buffer while
+        // paused (that buffer is what causes playback to resume behind live). Fully stop the player
+        // so loading stops and the buffer is released; [play] re-prepares from the live edge.
+        player.playWhenReady = false
+        player.stop()
     }
 
     override fun setPlayWhenReady(playWhenReady: Boolean) {
-        player.playWhenReady = playWhenReady
+        // Route through play()/pause() so the live-edge resume / stop-on-pause behaviour applies
+        // regardless of whether a controller calls play()/pause() or sets playWhenReady directly.
+        if (playWhenReady) play() else pause()
     }
 
     override fun getPlayWhenReady(): Boolean {

@@ -43,7 +43,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
@@ -167,13 +167,20 @@ open class MusicService : MediaLibraryService() {
         // (e.g. some station URLs) load instead of failing with ERROR_CODE_IO_BAD_HTTP_STATUS.
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-        val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(httpDataSourceFactory)
-        // These are live radio streams. Keep the spool buffer as short as possible so that while
-        // paused the player only pre-loads a tiny amount of audio; on resume it plays back at most
-        // this much behind the live edge instead of drifting far behind (which is what a large
-        // buffer would cause). Values are in ms and must satisfy the DefaultLoadControl ordering
-        // (min/max buffer >= the buffer-for-playback thresholds).
+        // The stations are progressive Icecast MP3 streams, so use ProgressiveMediaSource directly.
+        // Its continue-loading check interval (default 1 MB, ~60s at 128 kbit/s) is the granularity
+        // at which the LoadControl's time cap below can take effect: with the 1 MB default the player
+        // reads a huge block before re-checking, so the buffer overshoots the cap by ~20s. Shrinking
+        // it to 96 KB (~6s at 128 kbit/s) lets the cap actually bite, keeping the paused spool at
+        // roughly one block (~5-8s) ahead of live instead of ~20-50s.
+        val mediaSourceFactory = ProgressiveMediaSource.Factory(httpDataSourceFactory)
+            .setContinueLoadingCheckIntervalBytes(96 * 1024)
+        // These are live radio streams. Keep the spool buffer short so that while paused the player
+        // only pre-loads a small amount of audio; on resume it plays back at most this much behind
+        // the live edge instead of drifting far behind (which is what a large buffer would cause).
+        // Values are in ms and must satisfy the DefaultLoadControl ordering (min/max buffer >= the
+        // buffer-for-playback thresholds). The effective spool is governed jointly by this cap and
+        // the media source's read-block size above.
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 /* minBufferMs= */ 2_000,

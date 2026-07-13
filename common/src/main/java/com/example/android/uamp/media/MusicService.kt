@@ -398,10 +398,16 @@ open class MusicService : MediaLibraryService() {
                 putInt(CONTENT_STYLE_BROWSABLE_HINT, CONTENT_STYLE_GRID)
                 putInt(CONTENT_STYLE_PLAYABLE_HINT, CONTENT_STYLE_LIST)
             }
+            if (!isKnownCaller) {
+                // Reject unknown callers with an error rather than an empty root — passing
+                // MediaItem.EMPTY to LibraryResult.ofItem throws "mediaId must not be empty" and
+                // crashes the service.
+                return Futures.immediateFuture(
+                    LibraryResult.ofError<MediaItem>(LibraryResult.RESULT_ERROR_NOT_SUPPORTED)
+                )
+            }
             val libraryParams = LibraryParams.Builder().setExtras(rootExtras).build()
-            val rootMediaItem = if (!isKnownCaller) {
-                MediaItem.EMPTY
-            } else if (params?.isRecent == true) {
+            val rootMediaItem = if (params?.isRecent == true) {
                 if (exoPlayer.currentTimeline.isEmpty) {
                     storage.loadRecentSong()?.let {
                         preparePlayerForResumption(it)
@@ -448,9 +454,16 @@ open class MusicService : MediaLibraryService() {
             mediaId: String
         ): ListenableFuture<LibraryResult<MediaItem>> {
             return callWhenMusicSourceReady {
-                LibraryResult.ofItem(
-                    browseTree.getMediaItemByMediaId(mediaId) ?: MediaItem.EMPTY,
-                    LibraryParams.Builder().build())
+                val item = browseTree.getMediaItemByMediaId(mediaId)
+                if (item != null) {
+                    LibraryResult.ofItem(item, LibraryParams.Builder().build())
+                } else {
+                    // The requested id isn't in the current catalog. Returning MediaItem.EMPTY here
+                    // makes LibraryResult.ofItem throw "mediaId must not be empty" and crashes the
+                    // service — Android Auto hit this repeatedly while subscribing to items. Report
+                    // an error result instead.
+                    LibraryResult.ofError<MediaItem>(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                }
             }
         }
 

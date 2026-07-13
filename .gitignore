@@ -8,6 +8,8 @@
 
 # Generated files
 build/
+# Release build output (APK, baseline profiles, metadata)
+/app/release/
 
 # Extra (custom) settings
 extra-settings.gradle

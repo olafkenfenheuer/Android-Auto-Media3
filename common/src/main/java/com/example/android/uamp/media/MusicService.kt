@@ -423,11 +423,13 @@ open class MusicService : MediaLibraryService() {
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
             if (parentId == recentRootMediaItem.mediaId) {
+                // When Android Auto connects it queries the recent root to build the resumption UI.
+                // If nothing has been played yet, there is no recent song — return an empty list
+                // instead of crashing with an NPE (previously `!!`).
+                val recentSong = storage.loadRecentSong()
                 return Futures.immediateFuture(
                     LibraryResult.ofItemList(
-                        storage.loadRecentSong()?.let {
-                            song -> listOf(song)
-                        }!!,
+                        recentSong?.let { listOf(it) } ?: emptyList(),
                         LibraryParams.Builder().build()
                     )
                 )
@@ -487,7 +489,36 @@ open class MusicService : MediaLibraryService() {
             mediaItems: MutableList<MediaItem>
         ): ListenableFuture<MutableList<MediaItem>> {
             return callWhenMusicSourceReady {
-                mediaItems.map { browseTree.getMediaItemByMediaId(it.mediaId)!! }.toMutableList()
+                // Resolve each requested id against the current catalog. Drop ids that are no longer
+                // present (e.g. the catalog was refreshed after the controller cached the id) rather
+                // than crashing with an NPE (previously `!!`).
+                mediaItems.mapNotNull { browseTree.getMediaItemByMediaId(it.mediaId) }.toMutableList()
+            }
+        }
+
+        /**
+         * Called when playback is resumed without an explicit media item (e.g. the user presses
+         * play on the Android Auto / car media button while the session is idle, or after a reboot).
+         * The recent-media contract (see [onGetLibraryRoot] with [LibraryParams.isRecent]) requires
+         * this to be implemented; the default implementation throws [UnsupportedOperationException],
+         * which surfaced as a crash/resume failure. We resume the last played station.
+         */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            return callWhenMusicSourceReady {
+                val recentSong = storage.loadRecentSong()
+                    ?: throw UnsupportedOperationException("No recent media to resume")
+                val playableMediaItem = browseTree.getMediaItemByMediaId(recentSong.mediaId)
+                    ?: throw UnsupportedOperationException("Recent media no longer in catalog")
+                val startPositionMs = recentSong.mediaMetadata.extras
+                    ?.getLong(MEDIA_DESCRIPTION_EXTRAS_START_PLAYBACK_POSITION_MS) ?: 0L
+                MediaSession.MediaItemsWithStartPosition(
+                    ImmutableList.of(playableMediaItem),
+                    /* startIndex= */ 0,
+                    startPositionMs
+                )
             }
         }
 

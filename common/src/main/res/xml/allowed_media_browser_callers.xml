@@ -66,6 +66,15 @@ Adding New Keys:
         <key release="true">
             fd:b0:0c:43:db:de:8b:51:cb:31:2a:a8:1d:3b:5f:a1:77:13:ad:b9:4b:28:f5:98:d7:7f:8e:b8:9d:ac:ee:df
         </key>
+        <!--
+          Current Android Auto release signing certificate (e.g. gearhead 17.x). Newer Android Auto
+          builds are signed with this certificate; without it, PackageValidator treats Android Auto
+          as an unknown caller and the media library is served empty (the app appears broken / does
+          not show up). Verified with apksigner print-certs on the installed Android Auto app.
+        -->
+        <key release="true">
+            1c:a8:dc:c0:be:d3:cb:d8:72:d2:cb:79:12:00:c0:29:2c:a9:97:57:68:a8:2d:67:6b:8b:42:4f:b6:5b:52:95
+        </key>
     </signature>
 
     <signature

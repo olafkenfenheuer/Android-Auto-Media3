@@ -41,6 +41,7 @@ import androidx.media3.common.Player.EVENT_POSITION_DISCONTINUITY
 import androidx.media3.common.Player.Listener
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.util.EventLogger
@@ -168,8 +169,22 @@ open class MusicService : MediaLibraryService() {
             .setAllowCrossProtocolRedirects(true)
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(httpDataSourceFactory)
+        // These are live radio streams. Keep the spool buffer as short as possible so that while
+        // paused the player only pre-loads a tiny amount of audio; on resume it plays back at most
+        // this much behind the live edge instead of drifting far behind (which is what a large
+        // buffer would cause). Values are in ms and must satisfy the DefaultLoadControl ordering
+        // (min/max buffer >= the buffer-for-playback thresholds).
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs= */ 2_000,
+                /* maxBufferMs= */ 2_000,
+                /* bufferForPlaybackMs= */ 1_000,
+                /* bufferForPlaybackAfterRebufferMs= */ 2_000
+            )
+            .build()
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
             .build().apply {
             setAudioAttributes(uAmpAudioAttributes, true)
             setHandleAudioBecomingNoisy(true)

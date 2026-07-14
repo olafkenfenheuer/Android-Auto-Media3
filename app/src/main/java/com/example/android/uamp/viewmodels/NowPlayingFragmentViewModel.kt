@@ -66,7 +66,8 @@ class NowPlayingFragmentViewModel(
      * (i.e.: play/pause button or blank)
      */
     private val playbackStateObserver = Observer<PlaybackState> {
-        updateState(it, musicServiceConnection.nowPlaying.value!!)
+        val nowPlaying = musicServiceConnection.nowPlaying.value ?: return@Observer
+        updateState(it, nowPlaying)
     }
 
     /**
@@ -76,7 +77,8 @@ class NowPlayingFragmentViewModel(
      * changed. (i.e.: play/pause button or blank)
      */
     private val nowPlayingObserver = Observer<MediaItem> {
-        updateState(musicServiceConnection.playbackState.value!!, it)
+        val playbackState = musicServiceConnection.playbackState.value ?: return@Observer
+        updateState(playbackState, it)
     }
 
     /**

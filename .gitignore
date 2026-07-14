@@ -11,5 +11,8 @@ build/
 # Release build output (APK, baseline profiles, metadata)
 /app/release/
 
+# Signing secrets (keep the .example template, ignore the real one)
+keystore.properties
+
 # Extra (custom) settings
 extra-settings.gradle
